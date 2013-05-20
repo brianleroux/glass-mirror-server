@@ -1,10 +1,9 @@
-var readline      = require('readline')
-var rl            = readline.createInterface({input: process.stdin,output: process.stdout})
-var util          = require('util')
-var googleapis    = require('googleapis')
-var OAuth2Client  = googleapis.OAuth2Client
-var credentials   = require('./api-key-and-secret')
-var oauth2Client  = new OAuth2Client(credentials.key, credentials.secret, credentials.url)
+var readline     = require('readline')
+,   util         = require('util')
+,   google       = require('googleapis')
+,   credentials  = require('./api-key-and-secret')
+,   oauth2Client = new google.OAuth2Client(credentials.key, credentials.secret, credentials.url)
+
 
 var scope = ['https://www.googleapis.com/auth/userinfo.profile'                                                                        
             ,'https://www.googleapis.com/auth/userinfo.email'                                                                          
@@ -15,6 +14,7 @@ var scope = ['https://www.googleapis.com/auth/userinfo.profile'
 
 function getAccessToken(oauth2Client, callback) {
     var url = oauth2Client.generateAuthUrl({access_type:'offline', scope:scope})
+    ,   rl  = readline.createInterface({input: process.stdin,output: process.stdout})
     console.log('Visit the url: ', url);
     rl.question('Enter the code here:', function(code) {
         // request access token
@@ -37,7 +37,7 @@ function getAccessToken(oauth2Client, callback) {
     patch: [Function],
     update: [Function]
  */
-googleapis.discover('mirror', 'v1').execute(function(err, client) {
+google.discover('mirror', 'v1').execute(function(err, client) {
     getAccessToken(oauth2Client, function() {
         client.mirror.timeline.list().withAuthClient(oauth2Client).execute(function(err, c) {
             console.log(util.inspect(c.items.length))
