@@ -1,50 +1,61 @@
-var app = require('./lib/configuration')
-,   auth = require('./lib/authenticated')
-,   request = require('request')
-,   https = require('https')
-,   fs = require('fs')
-
-app.get('/', function(req, res){
-    res.render('index', { user: req.user })
-})
-
-app.get('/account', auth, function(req, res){
-    var token = req.session.token
-/*
-GET /mirror/v1/timeline HTTP/1.1
-    Host: www.googleapis.com
-    Authorization: Bearer {auth token}
-    var options = {
-        uri:"https://www.googleapis.com/mirror/v1/timeline",
-        headers:{"Authorization": "Bearer " + token}
-    }
-    
-    request(options, function(err, data, str) {
-        console.log("\n\n\n\n\n")
-        console.log(data)
-        console.log("\n\n\n\n\n")
-        res.render('account', { user: req.user, data:str  })
-    })
-*/
-        res.render('account', { user:req.user, data:req.session.token })
-})
-
-app.post('/message', auth, function(req, res) {
-    glass.timeline(req.params.message, function(err, data) {
-        res.redirect('/')
-    })
-})
-
-app.get('/login', function(req, res){
-    res.render('login', { user: req.user })
-})
+var readline      = require('readline')
+var googleapis    = require('googleapis')
+var OAuth2Client  = googleapis.OAuth2Client
+var credentials   = require('./api-key-and-secret')
+var CLIENT_ID     = credentials.key
+var CLIENT_SECRET = credentials.secret
+var REDIRECT_URL  = credentials.url
+var rl            = readline.createInterface({input: process.stdin,output: process.stdout})
 
 
+function getAccessToken(oauth2Client, callback) {
+  // generate consent page url
+  var url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: 'https://www.googleapis.com/auth/plus.me'
+  });
 
-var privateKey = fs.readFileSync(__dirname + '/key.pem').toString();
-var certificate = fs.readFileSync(__dirname + '/cert.pem').toString();
-var options = { key:privateKey, cert:certificate }
-// app.get('port')
-https.createServer(options,app).listen(3000, function(){
-      console.log("Express server listening on port " + app.get('port'));
-})
+  console.log('Visit the url: ', url);
+  rl.question('Enter the code here:', function(code) {
+
+    // request access token
+    oauth2Client.getToken(code, function(err, tokens) {
+      // set tokens to the client
+      // TODO: tokens should be set by OAuth2 client.
+      oauth2Client.credentials = tokens;
+      callback && callback();
+    });
+  });
+}
+
+function getUserProfile(client, authClient, userId, callback) {
+  client
+    .plus.people.get({ userId: userId })
+    .withAuthClient(authClient)
+    .execute(callback);
+}
+
+function printUserProfile(err, profile) {
+  if (err) {
+    console.log('An error occurred');
+  } else {
+    console.log(profile.displayName, ':', profile.tagline);
+  }
+}
+
+// load google plus v1 API resources and methods
+googleapis
+  .discover('plus', 'v1')
+  .execute(function(err, client) {
+
+  var oauth2Client =
+    new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
+
+  // retrieve an access token
+  getAccessToken(oauth2Client, function() {
+    // retrieve user profile
+    getUserProfile(
+      client, oauth2Client, 'me', printUserProfile);
+  });
+
+});
