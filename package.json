@@ -1,8 +1,9 @@
 {
-  "name": "Glass Pipe",
+  "name": "app",
   "version": "0.0.0",
   "dependencies": {
     "express": ">= 0.0.0",
+    "request": ">= 0.0.0",
     "ejs": ">= 0.0.0",
     "passport": ">= 0.0.0",
     "passport-google-oauth": ">= 0.0.0"
